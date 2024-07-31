@@ -261,6 +261,30 @@ pub fn Cpu(comptime config: Config) type {
 
                         self.registers[Self.Pc] += 1;
                     },
+                    // Push (r0, imm) /* 2 args */
+                    Instruction.Push.inst2num() => {
+                        const r0 = inst.decoded.args[0];
+                        const imm = inst.decoded.args[1];
+
+                        std.debug.print("Push r0: {}, imm: {}\n", .{ r0, imm });
+
+                        self.stack[self.registers[Self.Sp]] = self.registers[r0];
+                        self.registers[Self.Sp] -= imm;
+
+                        self.registers[Self.Pc] += 1;
+                    },
+                    // Pop (r0, imm) /* 2 args */
+                    Instruction.Pop.inst2num() => {
+                        const r0 = inst.decoded.args[0];
+                        const imm = inst.decoded.args[1];
+
+                        std.debug.print("Pop r0: {}, imm: {}\n", .{ r0, imm });
+
+                        self.registers[r0] = self.stack[self.registers[Self.Sp]];
+                        self.registers[Self.Sp] += imm;
+
+                        self.registers[Self.Pc] += 1;
+                    },
                     // Beq (r0, r1, addr) /* 3 args */
                     Instruction.Beq.inst2num() => {
                         const r0 = inst.decoded.args[0];
