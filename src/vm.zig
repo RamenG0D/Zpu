@@ -17,6 +17,8 @@ pub const Config = struct {
     pc_register: ?usize = null,
     // The register index that holds the stack pointer
     sp_register: ?usize = null,
+    // The number of general purpose registers
+    num_registers: ?usize = null,
 };
 
 pub const IoFnError = error{
@@ -52,6 +54,12 @@ pub fn Cpu(comptime config: Config) type {
             @compileError("stack_size must be greater than 0");
         } else if (config.stack_size) |size| size;
 
+        pub const num_registers = if (config.num_registers == null) {
+            @compileError("num_registers must be provided");
+        } else if (config.num_registers.? < 2) {
+            @compileError("num_registers must be greater than 0");
+        } else if (config.num_registers) |num| num;
+
         /// The program counter, defaults to reg 0
         pub const Pc: usize = if (config.pc_register) |pc| pc else 0;
         /// The Stack Pointer, defaults to reg 1
@@ -61,7 +69,7 @@ pub fn Cpu(comptime config: Config) type {
         flags: u16 = 0,
 
         /// the general purpose registers
-        registers: [16]usize = undefined,
+        registers: [num_registers]usize = undefined,
 
         /// The stack
         stack: [stack_size]usize = undefined,
@@ -82,6 +90,8 @@ pub fn Cpu(comptime config: Config) type {
             return (self.flags & @intFromEnum(flag)) != 0;
         }
 
+        // This is a continuous loop that runs until a halt instruction is encountered
+        // it is meant to be used to FULLY run a WHOLE cpu program start to finish (and be self contained)
         pub fn run(self: *Self) void {
             std.debug.print("Running...\n", .{});
             while (self.get_flag(Flags.Running)) {
@@ -398,7 +408,10 @@ pub fn Cpu(comptime config: Config) type {
 }
 
 pub const MemoryIOError = error{
-    MemoryOutOfBounds,
+    ReadOutOfBounds,
+    WriteOutOfBounds,
+    // etc, for anything else that could go wrong (should add more instead but well add those when we need them)
+    MemoryAccessError,
 };
 
 pub const Instruction = enum(u16) {
