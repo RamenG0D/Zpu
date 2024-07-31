@@ -87,7 +87,7 @@ pub fn Cpu(comptime config: Config) type {
         get_io: ?*const fn (Self, usize) IoFnError!IoFuncs = null,
 
         pub fn new() Self {
-            var self = .{
+            var s = Self{
                 .flags = 0,
                 .registers = undefined,
                 .stack = undefined,
@@ -96,9 +96,10 @@ pub fn Cpu(comptime config: Config) type {
                 .get_io = null,
             };
 
-            self.registers[Self.Sp] = stack_size - 1;
+            // set stack pointer to the top of the stack
+            s.registers[Self.Sp] = stack_size - 1;
 
-            return self;
+            return s;
         }
 
         pub fn get_flag(self: Self, flag: Flags) bool {
