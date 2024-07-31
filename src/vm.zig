@@ -86,6 +86,21 @@ pub fn Cpu(comptime config: Config) type {
         ///          that can be used to perform the requested io operations presumably.
         get_io: ?*const fn (Self, usize) IoFnError!IoFuncs = null,
 
+        pub fn new() Self {
+            var self = .{
+                .flags = 0,
+                .registers = undefined,
+                .stack = undefined,
+                .get_memory = null,
+                .set_memory = null,
+                .get_io = null,
+            };
+
+            self.registers[Self.Sp] = stack_size - 1;
+
+            return self;
+        }
+
         pub fn get_flag(self: Self, flag: Flags) bool {
             return (self.flags & @intFromEnum(flag)) != 0;
         }
@@ -268,7 +283,17 @@ pub fn Cpu(comptime config: Config) type {
 
                         std.debug.print("Push r0: {}, imm: {}\n", .{ r0, imm });
 
-                        self.stack[self.registers[Self.Sp]] = self.registers[r0];
+                        const Data = extern union {
+                            data: usize,
+                            bytes: [8]u8,
+                        };
+
+                        const data = Data{ .data = self.registers[r0] };
+
+                        // load data into the stack [0..8]
+                        for (data.bytes, 0..data.bytes.len) |byte, i| {
+                            self.stack[self.registers[Self.Sp] - i] = byte;
+                        }
                         self.registers[Self.Sp] -= imm;
 
                         self.registers[Self.Pc] += 1;
@@ -280,7 +305,18 @@ pub fn Cpu(comptime config: Config) type {
 
                         std.debug.print("Pop r0: {}, imm: {}\n", .{ r0, imm });
 
-                        self.registers[r0] = self.stack[self.registers[Self.Sp]];
+                        const Data = extern union {
+                            data: usize,
+                            bytes: [8]u8,
+                        };
+
+                        const data = Data{ .data = 0 };
+
+                        // load from the stack [0..8] into register
+                        for (0..data.bytes.len) |i| {
+                            data.bytes[i] = self.stack[self.registers[Self.Sp] + i];
+                        }
+                        self.registers[r0] = data.data;
                         self.registers[Self.Sp] += imm;
 
                         self.registers[Self.Pc] += 1;
